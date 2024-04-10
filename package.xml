@@ -3,8 +3,8 @@
 <package format="3">
   <name>benchmark</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="dev@todo.todo">dev</maintainer>
+  <description>Benchmarking for MIRMI@TUM</description>
+  <maintainer email="tbishnoi@torontomu.ca">dev</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
