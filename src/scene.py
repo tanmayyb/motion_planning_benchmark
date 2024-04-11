@@ -1,16 +1,43 @@
 #!/usr/bin/env python3
+"""
+Shows how to use a planning scene in MoveItPy to add collision objects and perform collision checking.
+"""
 
-import  time
-import  rclpy
-from    rclpy.logging import get_logger
+import time
+import rclpy
+from rclpy.logging import get_logger
 
-from    moveit.planning import MoveItPy
+from moveit.planning import MoveItPy
 
-from    geometry_msgs.msg import Pose
-from    moveit_msgs.msg import CollisionObject
-from    shape_msgs.msg import SolidPrimitive
+from geometry_msgs.msg import Pose
+from moveit_msgs.msg import CollisionObject
+from shape_msgs.msg import SolidPrimitive
 
-def add_collision_objects(planning_scene_monitor) -> None:
+
+def plan_and_execute(
+    robot,
+    planning_component,
+    logger,
+    sleep_time=0.0,
+):
+    """Helper function to plan and execute a motion."""
+    # plan to goal
+    logger.info("Planning trajectory")
+    plan_result = planning_component.plan()
+
+    # execute the plan
+    if plan_result:
+        logger.info("Executing plan")
+        robot_trajectory = plan_result.trajectory
+        robot.execute(robot_trajectory, controllers=[])
+    else:
+        logger.error("Planning failed")
+
+    time.sleep(sleep_time)
+
+
+def add_collision_objects(planning_scene_monitor):
+    """Helper function that adds collision objects to the planning scene."""
     object_positions = [
         (0.15, 0.1, 0.5),
         (0.25, 0.0, 1.0),
@@ -46,6 +73,7 @@ def add_collision_objects(planning_scene_monitor) -> None:
         scene.apply_collision_object(collision_object)
         scene.current_state.update()  # Important to ensure the scene is updated
 
+
 def main():
     ###################################################################
     # MoveItPy Setup
@@ -58,7 +86,6 @@ def main():
     panda_arm = panda.get_planning_component("panda_arm")
     planning_scene_monitor = panda.get_planning_scene_monitor()
     logger.info("MoveItPy instance created")
-
 
     ###################################################################
     # Plan with collision objects
@@ -115,4 +142,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
