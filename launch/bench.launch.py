@@ -18,9 +18,9 @@ def generate_launch_description():
         .trajectory_execution(file_path="config/gripper_moveit_controllers.yaml")
         .moveit_cpp(
             file_path=os.path.join(
-                        get_package_share_directory("benchmark"),
-                        "config",
-                        "motion_planning.yaml")
+                get_package_share_directory("benchmark"),
+                "config",
+                "motion_planning.yaml")
         )
         .to_moveit_configs()
     )
@@ -104,8 +104,8 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            moveit_py_node,
             scene_file,
+            moveit_py_node,
             robot_state_publisher,
             ros2_control_node,
             rviz_node,
