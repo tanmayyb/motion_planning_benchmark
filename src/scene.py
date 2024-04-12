@@ -156,21 +156,17 @@ class Planner():
                             sleep_time      : float=1.0
                         ) -> None:
 
-        # self.robot.set_start_state(configuration_name="ready")
         self.robot.set_start_state_to_current_state()
-        time.sleep(sleep_time)
-        # if use_collisions_ik:
-        #     if self.check_collisions():
-        #         pass
+        if use_collisions_ik:
+            if self.check_collisions():
+                return
 
         plan_result     = self.robot.plan()
-        time.sleep(sleep_time)
+        time.sleep(2*sleep_time)
         if plan_result:
             self.logger.info("Execute plan")
             trajectory  = plan_result.trajectory
             self.moveit_controller.execute(trajectory, controllers=[])   
-
-        time.sleep(sleep_time)
 
 
     def set_plan_and_execute_goals(
@@ -207,25 +203,20 @@ def main():
     planner                 = Planner(moveit_controller, planning_scene_monitor, arm, logger)
 
     world_scenario.set_scenario()  
+
+
     goals                   = [
-                                (0.5,0.5,0.5,0.5),
-                                (0.0,0.5,0.5,0.5),
-                                (-0.5,0.5,0.5,0.5),
-                                (0.0,0.5,0.5,0.5),
-    ] 
+                                (0.5,0.5,0.75,0.5),
+#                                (0.25,0.5,0.5,0.5),
+#                                (0.25,0.0,0.5,0.5),
+#                                (0.25,-0.5,0.5,0.5),
+                                (0.5,-0.5,0.75,0.5),
+                                (0.5,0.0,0.5,0.5),
+                                (0.5,0.0,0.65,0.5),
 
+                            ]
 
-    planner.set_plan_and_execute_goals(goals,sleep_time=2.5)
-
-    # planner.set_pose_goal(
-    #                         goal=(0.5, 0.5, 0.5, 0.0),
-    #                     )
-    # planner.plan_and_execute(
-    #                             use_collisions_ik=True,
-    #                             sleep_time=0.5,
-    #                         )
-
-
+    planner.set_plan_and_execute_goals(goals,sleep_time=1.0)
 
 
 if __name__ == "__main__":
