@@ -157,9 +157,9 @@ class Planner():
                         ) -> None:
 
         self.robot.set_start_state_to_current_state()
-        if use_collisions_ik:
-            if self.check_collisions():
-                return
+        # if use_collisions_ik:
+        #     if self.check_collisions():
+        #         return
 
         plan_result     = self.robot.plan()
         time.sleep(2*sleep_time)
