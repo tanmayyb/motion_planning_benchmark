@@ -31,6 +31,19 @@ def generate_launch_description():
         description="Benchmark plan for the Robot",
     )
 
+
+    logger_script = DeclareLaunchArgument(
+        "logger_script",
+        default_value="logger.py",
+        description="logging script for logging joint state information",
+    )
+
+    logger_node     = Node(
+        name="joint_logger_node",
+        package="benchmark",
+        executable=LaunchConfiguration("logger_script"),
+    )
+
     moveit_py_node = Node(
         name="moveit_py",
         package="benchmark",
@@ -106,6 +119,8 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            logger_script,
+            logger_node,
             benchmark_script,
             moveit_py_node,
             robot_state_publisher,
