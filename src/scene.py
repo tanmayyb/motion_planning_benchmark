@@ -4,64 +4,51 @@ Shows how to use a planning scene in MoveItPy to add collision objects and perfo
 """
 
 import  time
+import  numpy as np
 import  rclpy
 from    rclpy.logging import get_logger
+
 from    moveit.planning import MoveItPy
 from    moveit.core.kinematic_constraints import construct_joint_constraint
+from    moveit.core.robot_state import RobotState
 
 from    geometry_msgs.msg import Pose, PoseStamped
 from    moveit_msgs.msg import CollisionObject
 from    shape_msgs.msg import SolidPrimitive
 
 
-
 class WorldHandler():
     def __init__(   
                     self,
                     planning_scene_monitor,
+                    logger,
                 ):
         self.planning_scene_monitor = planning_scene_monitor  
-        self.scenarios      = [
-                                dict(
-                                    positions=[
-                                        (0.15, 0.1, 0.5),
-                                        (0.25, 0.0, 1.0),
-                                        ],
-                                    dimensions=[
-                                        (0.1, 0.4, 0.1),
-                                        (0.1, 0.4, 0.1),
-                                        ],
-                                ),
-                            ]
-        self.scenario_id    = 0
+        self.logger                 = logger
 
     def set_scenario(
                         self, 
-                        scenario_id:int=None,
+                        collision_objects   : list=list(),
                     ):
-        if scenario_id is None:
-            scenario_id = self.scenario_id
-        else:
-            assert scenario_id <= len(self.scenarios)
-        scenario                        = self.scenarios[scenario_id] 
-        collisions                      = self.create_collision_objects(scenario)
+        collisions                  = self.create_collision_objects(collision_objects)
         with self.planning_scene_monitor.read_write() as scene:
             scene.apply_collision_object(collisions)
             scene.current_state.update()  
-        # cycle to future default scenario
-        self.scenarios = 0 if scenario_id == len(self.scenarios)-1 else scenario_id + 1  
-
 
     def create_collision_objects(
                                     self, 
-                                    scenario    : dict,
-                                    ref_frame   : str="panda_link0"
+                                    collision_objects   : list,
+                                    ref_frame           : str="panda_link0",
                                 ):
         global CollisionObject, SolidPrimitive
         collision_object                    = CollisionObject()
         collision_object.header.frame_id    = ref_frame
         collision_object.id                 = "boxes" 
-        for position, dimensions in zip(scenario['positions'],scenario['dimensions']):
+
+        for (position, dimensions) in collision_objects:
+
+            self.logger.info(f"\n{position} {dimensions}")
+
             box_pose = Pose()
             box_pose.position.x,\
             box_pose.position.y,\
@@ -84,7 +71,6 @@ class WorldHandler():
             scene.current_state.update()
 
 
-
 class Planner():
     def __init__(
                     self,
@@ -99,13 +85,11 @@ class Planner():
         self.current_goal_state     = None
         self.logger                 = logger
 
-
-
-
     def set_pose_goal(
                         self, 
                         goal                    : tuple=(0.5, 0.5, 0.5, 0.5),
-                        joint_model_group_name  : str="panda_arm",
+                        joint_model_group_name  : str="panda_arm_hand",
+                        end_effector_link       : str="panda_hand",
                     ):
         pose_goal                       = PoseStamped()
         pose_goal.header.frame_id       = joint_model_group_name
@@ -117,49 +101,35 @@ class Planner():
 
         self.current_goal_state         = pose_stamped_goal
         self.robot.set_goal_state(
-                                    pose_stamped_msg=self.current_goal_state,#["pose_stamped"], 
-                                    pose_link="panda_hand"
+                                    pose_stamped_msg=self.current_goal_state,
+                                    pose_link=end_effector_link,
                                 )
         return pose_stamped_goal
 
-
-    def check_collisions(
-                            self,
-                            #joint_model_group_name="panda_arm",
-                        ) -> bool:
-
-        robot_collision_status          = False
-        with self.planning_scene_monitor.read_only() as scene:
-            robot_state                 = scene.current_state
-            # original_joint_positions    = robot_state\
-            #                                 .get_joint_group_positions(
-            #                                     self.current_goal_state.header.frame_id
-            #                                     )
-            robot_state.set_from_ik(
-                                        self.current_goal_state.header.frame_id, 
-                                        self.current_goal_state.pose, 
-                                        "panda_hand"
-                                    )
-            robot_state.update()  
-            robot_collision_status = scene.is_state_colliding(
-                robot_state=robot_state,  
-                joint_model_group_name=self.current_goal_state.header.frame_id,
-                verbose=True,
-            )
-            self.logger.info(f"\nRobot is in collision: {robot_collision_status}\n")
-
-        return robot_collision_status
+    def set_plan_and_execute_goals(
+                                        self,
+                                        goals       : list,
+                                        sleep_time  : float=1.0,
+                                    ):
+        time.sleep(2*sleep_time)
+        for goal in goals:
+            self.set_pose_goal(
+                                goal=goal,
+                            )
+            self.plan_and_execute(
+                                    use_collisions_ik=False,
+                                    sleep_time=sleep_time,
+                                )       
+            time.sleep(2*sleep_time)
+            self.reset_robot_pose()
+            break
 
     def plan_and_execute(
                             self,
                             use_collisions_ik=False,
                             sleep_time      : float=1.0
                         ) -> None:
-
         self.robot.set_start_state_to_current_state()
-        # if use_collisions_ik:
-        #     if self.check_collisions():
-        #         return
 
         plan_result     = self.robot.plan()
         time.sleep(2*sleep_time)
@@ -168,56 +138,66 @@ class Planner():
             trajectory  = plan_result.trajectory
             self.moveit_controller.execute(trajectory, controllers=[])   
 
+    def reset_robot_pose(   
+                            self,
+                        ) -> None:
 
-    def set_plan_and_execute_goals(
-                                        self,
-                                        goals       : list,
-                                        sleep_time  : float=1.0,
-                                    ):
+        # PLAN YOUR WAY BACK
+        # self.robot.set_goal_state(configuration_name="ready")
+        # self.plan_and_execute(use_collisions_ik=False)
+        
+        # OR, RESET POSITION (ONLY FOR SIMULATION)
+        with self.planning_scene_monitor.read_write() as scene:            
+            robot_state = scene.current_state
 
-        time.sleep(2*sleep_time)
-        for goal in goals:
-            self.set_pose_goal(
-                                goal=goal,
-                            )
-            self.plan_and_execute(
-                                    use_collisions_ik=True,
-                                    sleep_time=sleep_time,
-                                )       
-            time.sleep(2*sleep_time)
-
+            joint_positions = np.asarray([  
+                                             0.000, -0.785, 0.000,\
+                                            -2.356,  0.000, 1.571,\
+                                             0.785,
+                                        ],
+                                        dtype=np.float32
+                                    )
+            robot_state.set_joint_group_positions(
+                                                    "panda_arm",                                                    
+                                                    joint_positions, 
+                                                )
+            robot_state.update() 
+        self.logger.info(f'robot state should be reset now!')
+        time.sleep(2.0)
 
 def main():
     ###################################################################
     # MoveItPy Setup
     ###################################################################
     rclpy.init()
-    logger                  = get_logger("moveit_py_planning_scene")
-    moveit_controller       = MoveItPy(node_name="moveit_py_planning_scene")
+    logger                  = get_logger("benchmark_script")
+    moveit_controller       = MoveItPy(node_name="moveit_py_node")
     arm                     = moveit_controller.get_planning_component("panda_arm")
     planning_scene_monitor  = moveit_controller.get_planning_scene_monitor()
     
-    
-    arm.set_start_state(configuration_name="ready")
-    world_scenario          = WorldHandler(planning_scene_monitor)
+    world                   = WorldHandler(planning_scene_monitor, logger)
     planner                 = Planner(moveit_controller, planning_scene_monitor, arm, logger)
 
-    world_scenario.set_scenario()  
-
-
-    goals                   = [
-                                (0.5,0.5,0.75,0.5),
-#                                (0.25,0.5,0.5,0.5),
-#                                (0.25,0.0,0.5,0.5),
-#                                (0.25,-0.5,0.5,0.5),
-                                (0.5,-0.5,0.75,0.5),
-                                (0.5,0.0,0.5,0.5),
-                                (0.5,0.0,0.65,0.5),
-
+    ###################################################################
+    # BenchMark Setup
+    ###################################################################
+    obstacles               = [ # position       ,  dimensions
+                                ((0.10,-0.30, 0.65),(0.10, 0.10, 0.60)),
+                                ((0.10, 0.30, 0.65),(0.10, 0.10, 0.60))
                             ]
 
-    planner.set_plan_and_execute_goals(goals,sleep_time=1.0)
+    goal_states             = [
+                                (0.50, 0.50, 0.75, 0.50),
+                                (0.50,-0.50, 0.75, 0.50),
+                                (0.50, 0.00, 0.50, 0.50),
+                                (0.50, 0.00, 0.65, 0.50),
+                            ]
 
+    ###################################################################
+    # Run Benchmark
+    ###################################################################
+    world.set_scenario(collision_objects=obstacles)  
+    planner.set_plan_and_execute_goals(goal_states,sleep_time=1.0)
 
 if __name__ == "__main__":
     main()
