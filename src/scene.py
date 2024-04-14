@@ -111,9 +111,9 @@ class Planner():
         pose_goal.pose.orientation.w    = goal
         pose_stamped_goal               = pose_goal
 
-        # self.current_goal_state         = pose_stamped_goal
+        self.current_goal_state         = pose_stamped_goal
         self.robot.set_goal_state(
-                                    pose_stamped_msg=pose_stamped_goal, #self.current_goal_state,
+                                    pose_stamped_msg=self.current_goal_state,
                                     pose_link=end_effector_link,
                                 )
         return pose_stamped_goal
@@ -129,27 +129,62 @@ class Planner():
             self.set_pose_goal(
                                 goal=goal,
                             )
-            self.plan_and_execute(
-                                    use_collisions_ik=False,
+            result  = self.plan_and_execute(
+                                    use_collisions_ik=True,
                                     sleep_time=sleep_time,
                                 ) 
-            self.logger.info(f"{bcolors.OKGREEN}Goal execution done!{bcolors.ENDC}")
-            time.sleep(sleep_time)
+            self.logger.info(f"{bcolors.OKGREEN if result else bcolors.FAIL}                    \
+                                {'Goal execution done!' if result else 'Goal failed!'}\
+                                {bcolors.ENDC}")
+            # time.sleep(sleep_time)
             # self.reset_robot_pose()
             time.sleep(2*sleep_time)
-            
 
     def plan_and_execute(
                             self,
                             use_collisions_ik=False,
                             sleep_time      : float=1.0
-                        ) -> None:
+                        ) -> bool:
         self.robot.set_start_state_to_current_state()
 
+        if use_collisions_ik:
+            collision = self.check_for_collision()
+            if collision:
+                return False
+
+        # time.sleep(sleep_time)        
         plan_result     = self.robot.plan()
+        # time.sleep(sleep_time)        
         if plan_result:
             trajectory  = plan_result.trajectory
             self.moveit_controller.execute(trajectory, controllers=[])   
+        return True
+
+    def check_for_collision(self):
+        with self.planning_scene_monitor.read_only() as scene:
+            robot_state = scene.current_state
+            original_joint_positions = robot_state \
+                                        .get_joint_group_positions("panda_arm")
+            robot_state.set_from_ik(
+                                        "panda_arm", 
+                                        self.current_goal_state.pose, 
+                                        "panda_hand"
+                                    )
+            robot_state.update()  
+            robot_collision_status = scene.is_state_colliding(
+                                        robot_state=robot_state, 
+                                        joint_model_group_name="panda_arm", 
+                                        verbose=True
+                                    )
+            robot_state.set_joint_group_positions(
+                "panda_arm",
+                original_joint_positions,           # reset to original
+            )
+        self.logger.info(f"\n{bcolors.WARNING}Robot is in collision:{bcolors.ENDC}          \
+                            {bcolors.FAIL if robot_collision_status else bcolors.OKGREEN}   \
+                            {robot_collision_status}{bcolors.ENDC}\n"
+                        )
+        return robot_collision_status
 
     def reset_robot_pose(   
                             self,
@@ -203,7 +238,7 @@ def main():
                             ]
 
     ###################################################################
-    # Run Benchmark
+    # Create and Run Benchmark
     ###################################################################
     world.set_scenario(collision_objects=obstacles)  
     planner.set_plan_and_execute_goals(goal_states,sleep_time=1.0)
