@@ -242,6 +242,7 @@ def main():
     ###################################################################
     # Create and Run Benchmark
     ###################################################################
+    time.sleep(10.0)
     world.set_scenario(collision_objects=obstacles)  
     planner.set_plan_and_execute_goals(goal_states,sleep_time=1.0)
 
