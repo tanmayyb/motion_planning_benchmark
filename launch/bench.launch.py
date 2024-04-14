@@ -25,16 +25,16 @@ def generate_launch_description():
         .to_moveit_configs()
     )
 
-    scene_file = DeclareLaunchArgument(
-        "scene",
-        default_value="scene.py",
-        description="Scene Description of the Robot World",
+    benchmark_script = DeclareLaunchArgument(
+        "benchmark",
+        default_value="benchmark.py",
+        description="Benchmark plan for the Robot",
     )
 
     moveit_py_node = Node(
         name="moveit_py",
         package="benchmark",
-        executable=LaunchConfiguration("scene"),
+        executable=LaunchConfiguration("benchmark"),
         output="both",
         parameters=[moveit_config.to_dict()],
     )
@@ -102,14 +102,21 @@ def generate_launch_description():
             )
         ]
 
+    logger_node     = Node(
+        package="benchmark",
+        executable="logger.py",
+        description="Logger node for logging join positions."
+    )
+
     return LaunchDescription(
         [
-            scene_file,
+            benchmark_script,
             moveit_py_node,
             robot_state_publisher,
             ros2_control_node,
             rviz_node,
             static_tf,
+            logger_node,
         ]
         + load_controllers
     )

@@ -12,7 +12,8 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 install(PROGRAMS
-  src/scene.py
+  src/benchmark.py
+  src/logger.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
