@@ -17,6 +17,18 @@ from    moveit_msgs.msg import CollisionObject
 from    shape_msgs.msg import SolidPrimitive
 
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 class WorldHandler():
     def __init__(   
                     self,
@@ -99,9 +111,9 @@ class Planner():
         pose_goal.pose.orientation.w    = goal
         pose_stamped_goal               = pose_goal
 
-        self.current_goal_state         = pose_stamped_goal
+        # self.current_goal_state         = pose_stamped_goal
         self.robot.set_goal_state(
-                                    pose_stamped_msg=self.current_goal_state,
+                                    pose_stamped_msg=pose_stamped_goal, #self.current_goal_state,
                                     pose_link=end_effector_link,
                                 )
         return pose_stamped_goal
@@ -113,16 +125,19 @@ class Planner():
                                     ):
         time.sleep(2*sleep_time)
         for goal in goals:
+            self.logger.info(f"{bcolors.WARNING}Planning and executing goal:{bcolors.ENDC} {goal}")
             self.set_pose_goal(
                                 goal=goal,
                             )
             self.plan_and_execute(
                                     use_collisions_ik=False,
                                     sleep_time=sleep_time,
-                                )       
+                                ) 
+            self.logger.info(f"{bcolors.OKGREEN}Goal execution done!{bcolors.ENDC}")
+            time.sleep(sleep_time)
+            # self.reset_robot_pose()
             time.sleep(2*sleep_time)
-            self.reset_robot_pose()
-            break
+            
 
     def plan_and_execute(
                             self,
@@ -132,38 +147,32 @@ class Planner():
         self.robot.set_start_state_to_current_state()
 
         plan_result     = self.robot.plan()
-        time.sleep(2*sleep_time)
         if plan_result:
-            self.logger.info("Execute plan")
             trajectory  = plan_result.trajectory
             self.moveit_controller.execute(trajectory, controllers=[])   
 
     def reset_robot_pose(   
                             self,
+                            random  : bool=False,
                         ) -> None:
 
-        # PLAN YOUR WAY BACK
-        # self.robot.set_goal_state(configuration_name="ready")
-        # self.plan_and_execute(use_collisions_ik=False)
-        
-        # OR, RESET POSITION (ONLY FOR SIMULATION)
-        with self.planning_scene_monitor.read_write() as scene:            
+        joint_positions = np.asarray([  
+                                         0.000, -0.785, 0.000,\
+                                        -2.356,  0.000, 1.571,\
+                                         0.785,
+                                    ],
+                                    dtype=np.float32
+                                )
+        with self.planning_scene_monitor.read_write() as scene:
+            # update scene's model
             robot_state = scene.current_state
-
-            joint_positions = np.asarray([  
-                                             0.000, -0.785, 0.000,\
-                                            -2.356,  0.000, 1.571,\
-                                             0.785,
-                                        ],
-                                        dtype=np.float32
-                                    )
             robot_state.set_joint_group_positions(
-                                                    "panda_arm",                                                    
-                                                    joint_positions, 
-                                                )
-            robot_state.update() 
-        self.logger.info(f'robot state should be reset now!')
-        time.sleep(2.0)
+                "panda_arm",
+                joint_positions,
+            )
+            robot_state.update()
+        self.logger.info(f'{bcolors.OKCYAN}Robot state should be reset now!{bcolors.ENDC}')
+        
 
 def main():
     ###################################################################
