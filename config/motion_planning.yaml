@@ -8,7 +8,11 @@ planning_scene_monitor_options:
   wait_for_initial_state_timeout: 10.0
 
 planning_pipelines:
-  pipeline_names: ["ompl", "pilz_industrial_motion_planner", "chomp"]
+  pipeline_names: [
+                    "ompl", 
+                    # "pilz_industrial_motion_planner", 
+                    # "chomp"
+                  ]
 
 plan_request_params:
   planning_attempts: 5
@@ -25,19 +29,19 @@ ompl_rrtc:  # Namespace for individual plan request
     max_acceleration_scaling_factor: 1.0  # Acceleration scaling parameter for the trajectory generation algorithm that is called (if configured) after the path planning
     planning_time: 5.0  # Time budget for the motion plan request. If the planning problem cannot be solved within this time, an empty solution with error code is returned
 
-pilz_lin:
-  plan_request_params:
-    planning_attempts: 5
-    planning_pipeline: pilz_industrial_motion_planner
-    planner_id: "PTP"
-    max_velocity_scaling_factor: 1.0
-    max_acceleration_scaling_factor: 1.0
-    planning_time: 2.0
+# pilz_lin:
+#   plan_request_params:
+#     planning_attempts: 5
+#     planning_pipeline: pilz_industrial_motion_planner
+#     planner_id: "PTP"
+#     max_velocity_scaling_factor: 1.0
+#     max_acceleration_scaling_factor: 1.0
+#     planning_time: 2.0
 
-chomp_planner:
-  plan_request_params:
-    planning_attempts: 5
-    planning_pipeline: chomp
-    max_velocity_scaling_factor: 1.0
-    max_acceleration_scaling_factor: 1.0
-    planning_time: 2.0
+# chomp_planner:
+#   plan_request_params:
+#     planning_attempts: 5
+#     planning_pipeline: chomp
+#     max_velocity_scaling_factor: 1.0
+#     max_acceleration_scaling_factor: 1.0
+#     planning_time: 2.0
