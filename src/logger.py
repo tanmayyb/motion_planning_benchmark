@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
-import rclpy
-from rclpy.node import Node
-from sensor_msgs.msg import JointState
+import  rclpy
+from    rclpy.node import Node
+from    sensor_msgs.msg import JointState
+import  time
+import  pandas as pd
+import  numpy as np
+import  os
 
 class JointStateLogger(Node):
 
-    def __init__(self):
+    def __init__(
+                    self,
+                    ROOT_PATH   : str,
+                    ):
         super().__init__('joint_state_logger')
         self.subscription = self.create_subscription(
             JointState,
@@ -13,17 +20,33 @@ class JointStateLogger(Node):
             self.joint_state_callback,
             10
         )
+        self.logger         = self.get_logger()
+        self.OUTPUT_DIRPATH = os.path.join(ROOT_PATH, "benchmark", ".out")
+        self.buffer         = list()
+        self.BUFFER_TIMEOUT = 20.0
+        self.start_time     = time.time()
+
 
     def joint_state_callback(self, msg):
-        self.get_logger().info("Joint Positions:")
-        # for name, position in zip(msg.name, msg.position):
-        #     self.get_logger().info(f"{name}: {position:.2f}")
-        self.get_logger().info(f"{msg.name} {msg.position}")
+        if (time.time() - self.start_time) < self.BUFFER_TIMEOUT:
+            self.buffer.append(msg.position)
+
+    def save_buffer(self): 
+        OUTPUT_DIRPATH  = self.OUTPUT_DIRPATH
+        os.makedirs(OUTPUT_DIRPATH, exist_ok=True)
+        filepath        = os.path.join(OUTPUT_DIRPATH,"datalog.csv") 
+        df              = pd.DataFrame(np.asarray(self.buffer))
+        df.to_csv(filepath,index=False)
+        self.logger.info("Data saved")
 
 def main(args=None):
     rclpy.init(args=args)
-    joint_state_logger = JointStateLogger()
-    rclpy.spin(joint_state_logger)
+    joint_state_logger = JointStateLogger(os.getcwd())
+    try:
+        rclpy.spin(joint_state_logger)
+    except KeyboardInterrupt:
+        joint_state_logger.logger.info("Saving buffer data and exiting!")       
+    joint_state_logger.save_buffer()
     joint_state_logger.destroy_node()
     rclpy.shutdown()
 
