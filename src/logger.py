@@ -5,7 +5,7 @@ from    sensor_msgs.msg import JointState
 import  time
 import  pandas as pd
 import  numpy as np
-import  os
+import  os, json
 
 class JointStateLogger(Node):
 
@@ -22,20 +22,25 @@ class JointStateLogger(Node):
         )
         self.logger         = self.get_logger()
         self.OUTPUT_DIRPATH = os.path.join(ROOT_PATH, "benchmark", ".out")
-        self.buffer         = list()
-        self.BUFFER_TIMEOUT = 20.0
+        self.buffer         = dict(
+                                    position=list(), 
+                                    velocity=list(),
+                                    )
+        self.BUFFER_TIMEOUT = 60.0
         self.start_time     = time.time()
 
 
     def joint_state_callback(self, msg):
         if (time.time() - self.start_time) < self.BUFFER_TIMEOUT:
-            self.buffer.append(msg.position)
+            self.buffer['position'].append(json.dumps(msg.position.tolist()))
+            self.buffer['velocity'].append(json.dumps(msg.velocity.tolist()))
+            
 
     def save_buffer(self): 
         OUTPUT_DIRPATH  = self.OUTPUT_DIRPATH
         os.makedirs(OUTPUT_DIRPATH, exist_ok=True)
         filepath        = os.path.join(OUTPUT_DIRPATH,"datalog.csv") 
-        df              = pd.DataFrame(np.asarray(self.buffer))
+        df              = pd.DataFrame(self.buffer)
         df.to_csv(filepath,index=False)
         self.logger.info("Data saved")
 
@@ -46,7 +51,7 @@ def main(args=None):
         rclpy.spin(joint_state_logger)
     except KeyboardInterrupt:
         joint_state_logger.logger.info("Saving buffer data and exiting!")       
-    joint_state_logger.save_buffer()
+        joint_state_logger.save_buffer()
     joint_state_logger.destroy_node()
     rclpy.shutdown()
 
