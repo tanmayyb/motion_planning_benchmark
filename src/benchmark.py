@@ -130,20 +130,25 @@ class Planner():
                                 goal=goal,
                             )
             result  = self.plan_and_execute(
-                                    use_collisions_ik=True,
+                                    use_collisions_ik=False,
                                     sleep_time=sleep_time,
                                 ) 
-            self.logger.info(f"{bcolors.OKGREEN if result else bcolors.FAIL}                    \
-                                {'Goal execution done!' if result else 'Goal failed!'}\
-                                {bcolors.ENDC}")
-            # time.sleep(sleep_time)
-            # self.reset_robot_pose()
-            time.sleep(2*sleep_time)
 
+            if result == False:
+                self.logger.info(f" {bcolors.FAIL}  \
+                                    Goal failed!    \
+                                    {bcolors.ENDC}")
+                continue
+
+            self.logger.info(f" {bcolors.OKGREEN}           \
+                                {'Goal execution success!'} \
+                                {bcolors.ENDC}")
+            # self.reset_robot_pose()
+            
     def plan_and_execute(
                             self,
-                            use_collisions_ik=False,
-                            sleep_time      : float=1.0
+                            use_collisions_ik   : bool=False,
+                            sleep_time          : float=1.0
                         ) -> bool:
         self.robot.set_start_state_to_current_state()
 
@@ -151,10 +156,7 @@ class Planner():
             collision = self.check_for_collision()
             if collision:
                 return False
-
-        # time.sleep(sleep_time)        
-        plan_result     = self.robot.plan()
-        # time.sleep(sleep_time)        
+        plan_result     = self.robot.plan()      
         if plan_result:
             trajectory  = plan_result.trajectory
             self.moveit_controller.execute(trajectory, controllers=[])   
@@ -180,9 +182,9 @@ class Planner():
                 "panda_arm",
                 original_joint_positions,           # reset to original
             )
-        self.logger.info(f"\n{bcolors.WARNING}Robot is in collision:{bcolors.ENDC}          \
-                            {bcolors.FAIL if robot_collision_status else bcolors.OKGREEN}   \
-                            {robot_collision_status}{bcolors.ENDC}\n"
+        self.logger.info(f"{bcolors.WARNING}Robot is in collision:{bcolors.ENDC}          \
+                           {bcolors.FAIL if robot_collision_status else bcolors.OKGREEN}   \
+                           {robot_collision_status}{bcolors.ENDC}\n"
                         )
         return robot_collision_status
 
