@@ -2,6 +2,7 @@
 **.txt
 !CMakeLists.txt
 
+*.ipynb
 /build
 /install
 /log
