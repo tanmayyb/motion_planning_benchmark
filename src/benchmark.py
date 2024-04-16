@@ -120,8 +120,9 @@ class Planner():
 
     def set_plan_and_execute_goals(
                                         self,
-                                        goals       : list,
-                                        sleep_time  : float=1.0,
+                                        goals               : list,
+                                        sleep_time          : float=1.0,
+                                        use_collisions_ik   : bool=False,
                                     ):
         time.sleep(2*sleep_time)
         for goal in goals:
@@ -130,7 +131,7 @@ class Planner():
                                 goal=goal,
                             )
             result  = self.plan_and_execute(
-                                    use_collisions_ik=False,
+                                    use_collisions_ik=use_collisions_ik,
                                     sleep_time=sleep_time,
                                 ) 
 
@@ -143,7 +144,8 @@ class Planner():
             self.logger.info(f" {bcolors.OKGREEN}           \
                                 {'Goal execution success!'} \
                                 {bcolors.ENDC}")
-            # self.reset_robot_pose()
+            self.reset_robot_pose()
+            time.sleep(sleep_time)
             
     def plan_and_execute(
                             self,
@@ -154,6 +156,7 @@ class Planner():
 
         if use_collisions_ik:
             collision = self.check_for_collision()
+            time.sleep(sleep_time)
             if collision:
                 return False
         plan_result     = self.robot.plan()      
@@ -232,19 +235,29 @@ def main():
                                 ((0.10, 0.30, 0.65),(0.10, 0.10, 0.60))
                             ]
 
-    goal_states             = [
-                                (0.50, 0.50, 0.75, 0.50),
-                                (0.50,-0.50, 0.75, 0.50),
-                                (0.50, 0.00, 0.50, 0.50),
-                                (0.50, 0.00, 0.65, 0.50),
+    goal_states             = [ #   x     y     z     ?
+                                ( 0.50, 0.50, 0.75, 0.50),
+                                ( 0.50,-0.50, 0.75, 0.50),
+                                ( 0.50, 0.00, 0.50, 0.50),
+                                ( 0.50, 0.00, 1.00, 0.50),
+                                # ( 0.25, 0.50, 0.50, 0.50),
+                                # (-0.25, 0.50, 0.50, 0.50),
+                                # ( 0.25,-0.50, 0.50, 0.50),
+                                # (-0.25,-0.50, 0.50, 0.50),
+                                # ( 0.50, 0.00, 0.33, 0.50),
+                                # (-0.50, 0.00, 0.75, 0.50),
                             ]
 
     ###################################################################
     # Create and Run Benchmark
     ###################################################################
-    time.sleep(10.0)
+    time.sleep(1.0)
     world.set_scenario(collision_objects=obstacles)  
-    planner.set_plan_and_execute_goals(goal_states,sleep_time=1.0)
+    planner.set_plan_and_execute_goals(
+                                        goal_states,
+                                        sleep_time=2.0, 
+                                        use_collisions_ik=False,
+                                        )
 
 if __name__ == "__main__":
     main()
