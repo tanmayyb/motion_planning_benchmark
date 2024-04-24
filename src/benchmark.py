@@ -108,7 +108,10 @@ class Planner():
         pose_goal.pose.position.x,\
         pose_goal.pose.position.y,\
         pose_goal.pose.position.z,\
-        pose_goal.pose.orientation.w    = goal
+        pose_goal.pose.orientation.w,\
+        pose_goal.pose.orientation.x,\
+        pose_goal.pose.orientation.y,\
+        pose_goal.pose.orientation.z    = goal
         pose_stamped_goal               = pose_goal
 
         self.current_goal_state         = pose_stamped_goal
@@ -144,7 +147,7 @@ class Planner():
             self.logger.info(f" {bcolors.OKGREEN}           \
                                 {'Goal execution success!'} \
                                 {bcolors.ENDC}")
-            self.reset_robot_pose()
+            # self.reset_robot_pose()
             time.sleep(sleep_time)
             
     def plan_and_execute(
@@ -235,17 +238,18 @@ def main():
                                 ((0.10, 0.30, 0.65),(0.10, 0.10, 0.60))
                             ]
 
-    goal_states             = [ #   x     y     z     ?
-                                ( 0.50, 0.50, 0.75, 0.50),
-                                ( 0.50,-0.50, 0.75, 0.50),
-                                ( 0.50, 0.00, 0.50, 0.50),
-                                ( 0.50, 0.00, 1.00, 0.50),
-                                # ( 0.25, 0.50, 0.50, 0.50),
-                                # (-0.25, 0.50, 0.50, 0.50),
-                                # ( 0.25,-0.50, 0.50, 0.50),
-                                # (-0.25,-0.50, 0.50, 0.50),
-                                # ( 0.50, 0.00, 0.33, 0.50),
-                                # (-0.50, 0.00, 0.75, 0.50),
+    # https://quaternions.online/
+    goal_states             = [ #   x     y     z     w     x       y   z
+                                ( 0.50, 0.50, 0.75, 0.707, 0.00, 0.707, 0.00),
+                                ( 0.50,-0.50, 0.75, 0.707, 0.00, 0.707, 0.00),
+                                ( 0.50, 0.00, 0.50, 0.707, 0.00, 0.707, 0.00),
+                                ( 0.50, 0.00, 1.00, 0.707, 0.00, 0.707, 0.00),
+                                ( 0.25, 0.50, 0.50, 0.707, 0.00, 0.707, 0.00),
+                                (-0.25, 0.50, 0.50, 0.707, 0.00, 0.707, 0.00),
+                                ( 0.25,-0.50, 0.50, 0.707, 0.00, 0.707, 0.00),
+                                (-0.25,-0.50, 0.50, 0.707, 0.00, 0.707, 0.00),
+                                ( 0.50, 0.00, 0.33, 0.707, 0.00, 0.707, 0.00),
+                                (-0.50, 0.00, 0.75, 0.707, 0.00, 0.707, 0.00),
                             ]
 
     ###################################################################
