@@ -5,8 +5,11 @@ Shows how to use a planning scene in MoveItPy to add collision objects and perfo
 
 import  time
 import  numpy as np
+from    threading import Thread
+
 import  rclpy
 from    rclpy.logging import get_logger
+from    rclpy.node import Node
 
 from    moveit.planning import MoveItPy
 from    moveit.core.kinematic_constraints import construct_joint_constraint
@@ -15,6 +18,7 @@ from    moveit.core.robot_state import RobotState
 from    geometry_msgs.msg import Pose, PoseStamped
 from    moveit_msgs.msg import CollisionObject
 from    shape_msgs.msg import SolidPrimitive
+from    std_msgs.msg import Bool
 
 
 class bcolors:
@@ -27,6 +31,29 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
+
+def spin_node(node):
+    node.get_logger().info("Node spinning...")
+    try:
+        rclpy.spin(node)
+    finally:
+        node.destroy_node()
+
+
+class MotionSequenceLogger(Node):
+    def __init__(self):
+        super().__init__('motion_sequence_logger')
+        self.publisher_ = self.create_publisher(Bool, 'motion_sequence_state', 10)
+
+    def publish(
+                    self,   
+                    is_running   : bool=True,
+                ) -> None:
+        msg         = Bool()
+        msg.data    = is_running
+        self.publisher_.publish(msg)
+        self.get_logger().info(f'{bcolors.BOLD}Motion Sequence is Running:{bcolors.ENDC} {bcolors.OKGREEN if is_running else bcolors.WARNING}{is_running}{bcolors.ENDC}')
 
 
 class WorldHandler():
@@ -90,12 +117,14 @@ class Planner():
                     planning_scene_monitor,
                     robot,
                     logger,
+                    sequence_logger_node,
                 ):
         self.moveit_controller      = moveit_controller
         self.planning_scene_monitor = planning_scene_monitor  
         self.robot                  = robot
         self.current_goal_state     = None
         self.logger                 = logger
+        self.sequence_logger_node   = sequence_logger_node
 
     def set_pose_goal(
                         self, 
@@ -129,6 +158,7 @@ class Planner():
                                     ):
         time.sleep(2*sleep_time)
         for goal in goals:
+            self.sequence_logger_node.publish(is_running=True)
             self.logger.info(f"{bcolors.WARNING}Planning and executing goal:{bcolors.ENDC} {goal}")
             self.set_pose_goal(
                                 goal=goal,
@@ -139,11 +169,13 @@ class Planner():
                                 ) 
 
             if result == False:
+                self.sequence_logger_node.publish(is_running=False)
                 self.logger.info(f" {bcolors.FAIL}  \
                                     Goal failed!    \
                                     {bcolors.ENDC}")
                 continue
 
+            self.sequence_logger_node.publish(is_running=False)
             self.logger.info(f" {bcolors.OKGREEN}           \
                                 {'Goal execution success!'} \
                                 {bcolors.ENDC}")
@@ -227,8 +259,20 @@ def main():
     arm                     = moveit_controller.get_planning_component("panda_arm")
     planning_scene_monitor  = moveit_controller.get_planning_scene_monitor()
     
+    sequence_logger_node    = MotionSequenceLogger()
+    spin_thread             = Thread(target=spin_node, args=(sequence_logger_node,))
+    spin_thread.start()
+
     world                   = WorldHandler(planning_scene_monitor, logger)
-    planner                 = Planner(moveit_controller, planning_scene_monitor, arm, logger)
+    planner                 = Planner(
+                                        moveit_controller, 
+                                        planning_scene_monitor, 
+                                        arm, 
+                                        logger,
+                                        sequence_logger_node
+                                    )
+
+
 
     ###################################################################
     # BenchMark Setup
@@ -261,7 +305,9 @@ def main():
                                         goal_states,
                                         sleep_time=2.0, 
                                         use_collisions_ik=False,
-                                        )
+                                    )
+    
+    spin_thread.join()
 
 if __name__ == "__main__":
     main()
