@@ -1,8 +1,8 @@
 **/__pycache__/
-**.txt
-!CMakeLists.txt
 
-*.ipynb
+
 /build
 /install
 /log
+/rosbags/*
+/prototypes/*
