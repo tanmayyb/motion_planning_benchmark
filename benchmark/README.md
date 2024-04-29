@@ -1,8 +1,9 @@
 # motion_planning_benchmark
 
 ```
-cd ~/ws_tum
+cd ..
 ```
+
 
 ## Build and Source package:
 ```
