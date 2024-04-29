@@ -8,6 +8,7 @@
 /rosbags/*
 !/rosbags/utils
 !/rosbags/bag.ipynb
+!/rosbags/bag.py
 
 /prototypes/*
 /motion_bench_maker/*
