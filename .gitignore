@@ -4,5 +4,10 @@
 /build
 /install
 /log
+
 /rosbags/*
+!/rosbags/utils
+!/rosbags/bag.ipynb
+
 /prototypes/*
+/motion_bench_maker/*
